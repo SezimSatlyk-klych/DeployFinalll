@@ -369,9 +369,7 @@ function CrmTable2025({ onProfile }) {
       <TableChartIcon sx={{ fontSize: 64, color: '#b6d4fe', mb: 2 }} />
       <Typography variant="h6" sx={{ color: '#2563eb', fontWeight: 700, mb: 1 }}>По данному фильтру нет данных</Typography>
       <Typography variant="body2" sx={{ color: '#888' }}>Измените параметры фильтра или сбросьте фильтры для просмотра всех записей.</Typography>
-      <Button variant="outlined" sx={{ mt: 3, fontWeight: 700, borderRadius: 2 }} onClick={() => setFilters({
-        type: '', dateFrom: '', dateTo: '', amountFrom: '', amountTo: '', gender: '', language: '', by: '', source: ''
-      })}>
+      <Button variant="outlined" sx={{ mt: 3, fontWeight: 700, borderRadius: 2 }} onClick={resetFilters}>
         Вернуть в CRM 2025
       </Button>
     </Box>
