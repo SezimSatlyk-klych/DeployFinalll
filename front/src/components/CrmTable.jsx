@@ -20,14 +20,7 @@ function CrmTable({ refresh, onProfile }) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
-  const [year, setYear] = useState('');
-  const [month, setMonth] = useState('');
   const [donorType, setDonorType] = useState('');
-  const allYears = Array.from({length: 2030-2019+1}, (_,i) => String(2019+i));
-  const monthsList = [
-    '', 'январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
-    'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'
-  ];
   const donorTypes = [
     { value: 'single', label: 'Разовый' },
     { value: 'periodic', label: 'Периодический' },
@@ -63,8 +56,6 @@ function CrmTable({ refresh, onProfile }) {
     localStorage.removeItem('crmFiltersTimestamp');
     
     return {
-      year: '',
-      month: '',
       amount_from: '',
       amount_to: '',
       date_from: '',
@@ -91,8 +82,6 @@ function CrmTable({ refresh, onProfile }) {
     }
     
     return {
-      year: '',
-      month: '',
       amount_from: '',
       amount_to: '',
       date_from: '',
@@ -126,8 +115,6 @@ function CrmTable({ refresh, onProfile }) {
   const handleExport = async () => {
     try {
       const params = [];
-      if (filters.year) params.push(`year=${encodeURIComponent(filters.year)}`);
-      if (filters.month) params.push(`month=${encodeURIComponent(filters.month)}`);
       if (filters.amount_from) params.push(`amount_from=${encodeURIComponent(filters.amount_from)}`);
       if (filters.amount_to) params.push(`amount_to=${encodeURIComponent(filters.amount_to)}`);
       if (filters.date_from) params.push(`date_from=${encodeURIComponent(filters.date_from)}`);
@@ -167,7 +154,7 @@ function CrmTable({ refresh, onProfile }) {
         // Фильтры устарели, очищаем их
         localStorage.removeItem('crmFilters');
         localStorage.removeItem('crmFiltersTimestamp');
-        const emptyFilters = { year: '', month: '', amount_from: '', amount_to: '', date_from: '', date_to: '', source: '', type: [], by: '' };
+        const emptyFilters = { amount_from: '', amount_to: '', date_from: '', date_to: '', source: '', type: [], by: '' };
         setDraftFilters(emptyFilters);
         setFilters(emptyFilters);
       }
@@ -184,8 +171,6 @@ function CrmTable({ refresh, onProfile }) {
     setError('');
     // Build query params for /api/crm/filter
     const params = [];
-    if (filters.year) params.push(`year=${encodeURIComponent(filters.year)}`);
-    if (filters.month) params.push(`month=${encodeURIComponent(filters.month)}`);
     if (filters.amount_from) params.push(`amount_from=${encodeURIComponent(filters.amount_from)}`);
     if (filters.amount_to) params.push(`amount_to=${encodeURIComponent(filters.amount_to)}`);
     if (filters.date_from) params.push(`date_from=${encodeURIComponent(filters.date_from)}`);
@@ -216,7 +201,7 @@ function CrmTable({ refresh, onProfile }) {
       <TableChartIcon sx={{ fontSize: 64, color: '#b6d4fe', mb: 2 }} />
       <Typography variant="h6" sx={{ color: '#2563eb', fontWeight: 700, mb: 1 }}>По данному фильтру нет данных</Typography>
       <Typography variant="body2" sx={{ color: '#888' }}>Измените параметры фильтра или сбросьте фильтры для просмотра всех записей.</Typography>
-      <Button variant="outlined" sx={{ mt: 3, fontWeight: 700, borderRadius: 2 }} onClick={() => { setYear(''); setMonth(''); setDonorType(''); }}>
+      <Button variant="outlined" sx={{ mt: 3, fontWeight: 700, borderRadius: 2 }} onClick={() => { setDonorType(''); }}>
         Вернуть в CRM
       </Button>
     </Box>
@@ -271,6 +256,50 @@ function CrmTable({ refresh, onProfile }) {
   // Helper for status chip
   const renderCell = (col, value, row) => {
     const colLower = col.toLowerCase();
+    
+    // Форматирование дат
+    if (colLower.includes('дата') || colLower.includes('date')) {
+      if (!value) return '';
+      
+      try {
+        // Пробуем разные форматы дат
+        let date;
+        if (typeof value === 'string') {
+          // Формат DD.MM.YYYY - исправляем парсинг
+          if (value.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
+            const parts = value.split('.');
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10);
+            const year = parseInt(parts[2], 10);
+            date = new Date(year, month - 1, day);
+          }
+          // Формат YYYY-MM-DDTHH:MM:SS
+          else if (value.includes('T')) {
+            date = new Date(value);
+          }
+          // Формат YYYY-MM-DD
+          else if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            date = new Date(value);
+          }
+          else {
+            date = new Date(value);
+          }
+        } else {
+          date = new Date(value);
+        }
+        
+        if (isNaN(date.getTime())) return value;
+        
+        // Форматируем в DD.MM.YYYY
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}.${month}.${year}`;
+      } catch (e) {
+        return value;
+      }
+    }
+    
     if (colLower.includes('отправитель') || colLower.includes('фио') || colLower.includes('e-mail')) {
       // Kлюч для профиля: приоритетно ФИО, иначе email/phone (текущая ячейка)
       const donorKeyRaw = row['ФИО'] && row['ФИО'].trim() ? row['ФИО'] : value;
@@ -309,19 +338,6 @@ function CrmTable({ refresh, onProfile }) {
     }}>
       {/* Фильтры */}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3, alignItems: 'center' }}>
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Год</InputLabel>
-          <Select value={draftFilters.year} label="Год" onChange={e => handleDraftChange('year', e.target.value)}>
-            <MenuItem value="">Все</MenuItem>
-            {allYears.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
-          </Select>
-        </FormControl>
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Месяц</InputLabel>
-          <Select value={draftFilters.month} label="Месяц" onChange={e => handleDraftChange('month', e.target.value)}>
-            {monthsList.map(m => <MenuItem key={m} value={m}>{m ? m[0].toUpperCase() + m.slice(1) : 'Все'}</MenuItem>)}
-          </Select>
-        </FormControl>
         <FormControl size="small" sx={{ minWidth: 150 }}>
           <InputLabel>Тип</InputLabel>
           <Select

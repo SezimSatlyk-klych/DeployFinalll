@@ -189,6 +189,49 @@ function CrmTable({ refresh, onProfile }) {
 
   // Helper for status chip
   const renderCell = (col, value, row) => {
+    // Форматирование дат
+    if (col.toLowerCase().includes('дата') || col.toLowerCase().includes('date')) {
+      if (!value) return '';
+      
+      try {
+        // Пробуем разные форматы дат
+        let date;
+        if (typeof value === 'string') {
+          // Формат DD.MM.YYYY - исправляем парсинг
+          if (value.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
+            const parts = value.split('.');
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10);
+            const year = parseInt(parts[2], 10);
+            date = new Date(year, month - 1, day);
+          }
+          // Формат YYYY-MM-DDTHH:MM:SS
+          else if (value.includes('T')) {
+            date = new Date(value);
+          }
+          // Формат YYYY-MM-DD
+          else if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            date = new Date(value);
+          }
+          else {
+            date = new Date(value);
+          }
+        } else {
+          date = new Date(value);
+        }
+        
+        if (isNaN(date.getTime())) return value;
+        
+        // Форматируем в DD.MM.YYYY
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}.${month}.${year}`;
+      } catch (e) {
+        return value;
+      }
+    }
+    
     if (col.toLowerCase().includes('отправитель')) {
       return <Button variant="text" sx={{ color: '#2563eb', textTransform: 'none', fontWeight: 700, p: 0 }} onClick={() => onProfile && onProfile(value)}>{value}</Button>;
     }

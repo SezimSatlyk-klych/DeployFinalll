@@ -290,6 +290,49 @@ function CrmTable2025({ onProfile }) {
     checkAndClearStaleFilters();
   }, []);
 
+  // Функция форматирования дат
+  const formatDate = (value) => {
+    if (!value) return '';
+    
+    try {
+      // Пробуем разные форматы дат
+      let date;
+      if (typeof value === 'string') {
+        // Формат DD.MM.YYYY - исправляем парсинг
+        if (value.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
+          const parts = value.split('.');
+          const day = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10);
+          const year = parseInt(parts[2], 10);
+          date = new Date(year, month - 1, day);
+        }
+        // Формат YYYY-MM-DDTHH:MM:SS
+        else if (value.includes('T')) {
+          date = new Date(value);
+        }
+        // Формат YYYY-MM-DD
+        else if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          date = new Date(value);
+        }
+        else {
+          date = new Date(value);
+        }
+      } else {
+        date = new Date(value);
+      }
+      
+      if (isNaN(date.getTime())) return value;
+      
+      // Форматируем в DD.MM.YYYY
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}.${month}.${year}`;
+    } catch (e) {
+      return value;
+    }
+  };
+
   useEffect(() => {
     setLoading(true);
     setError('');
@@ -543,7 +586,9 @@ function CrmTable2025({ onProfile }) {
                   }}
                   onClick={col === 'ФИО' && onProfile ? () => onProfile(row['ФИО'], 'ФИО') : undefined}
                   >
-                    {col === 'язык' && Array.isArray(row[col]) ? row[col].join(', ') : row[col]}
+                    {col === 'язык' && Array.isArray(row[col]) ? row[col].join(', ') : 
+                     (col.toLowerCase().includes('дата') || col.toLowerCase().includes('date')) ? formatDate(row[col]) : 
+                     row[col]}
                   </td>
                 ))}
                 <td>
