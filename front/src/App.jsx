@@ -23,7 +23,7 @@ import ManualCrmPage from './components/ManualCrmPage';
 import DonorProfilePage from './components/DonorProfilePage';
 import MainPage from './components/MainPage';
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 function Landing() {
   return (
@@ -149,14 +149,14 @@ function CrmTable({ refresh, onProfile }) {
   React.useEffect(() => {
     setLoading(true);
     setError('');
-    let url = 'http://localhost:8000/api/crm';
+    let url = `${API_URL}/crm`;
     if (donorType) {
-      url = `http://localhost:8000/api/crm/donator_type?type=${donorType}`;
+      url = `${API_URL}/crm/donator_type?type=${donorType}`;
     } else if (year || month) {
       const params = [];
       if (year) params.push(`year=${year}`);
       if (month) params.push(`month=${encodeURIComponent(month)}`);
-      url = `http://localhost:8000/api/crm/filter?${params.join('&')}`;
+      url = `${API_URL}/crm/filter?${params.join('&')}`;
     }
     fetch(url)
       .then(res => {
