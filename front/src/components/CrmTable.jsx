@@ -2,10 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Box, Typography, Alert, TextField, Button, FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText } from '@mui/material';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
-import { DatePicker } from '@mui/x-date-pickers';
-import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import ruLocale from 'date-fns/locale/ru';
 
 // Удаляем служебные части "БИН: …", "ИИК: …", "ИИН: …" и т.п. из ФИО
 const cleanName = (raw = '') => {
@@ -265,14 +261,20 @@ function CrmTable({ refresh, onProfile }) {
         // Пробуем разные форматы дат
         let date;
         if (typeof value === 'string') {
-          // Формат DD.MM.YYYY - исправляем парсинг
-          if (value.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
-            const parts = value.split('.');
-            const day = parseInt(parts[0], 10);
-            const month = parseInt(parts[1], 10);
-            const year = parseInt(parts[2], 10);
-            date = new Date(year, month - 1, day);
+                  // Формат DD.MM.YYYY - исправляем парсинг
+        if (value.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
+          const parts = value.split('.');
+          const day = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10);
+          const year = parseInt(parts[2], 10);
+          
+          // Валидация даты
+          if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100) {
+            return value;
           }
+          
+          date = new Date(year, month - 1, day);
+        }
           // Формат YYYY-MM-DDTHH:MM:SS
           else if (value.includes('T')) {
             date = new Date(value);
@@ -369,36 +371,22 @@ function CrmTable({ refresh, onProfile }) {
           onChange={e => handleDraftChange('amount_to', e.target.value)}
           sx={{ minWidth: 100 }}
         />
-        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ruLocale}>
-          <DatePicker
-            label="Дата с"
-            value={draftFilters.date_from ? new Date(draftFilters.date_from) : null}
-            onChange={(newValue) => {
-              const formattedDate = newValue ? newValue.toISOString().split('T')[0] : '';
-              handleDraftChange('date_from', formattedDate);
-            }}
-            slotProps={{
-              textField: {
-                size: "small",
-                sx: { minWidth: 140 }
-              }
-            }}
-          />
-          <DatePicker
-            label="Дата по"
-            value={draftFilters.date_to ? new Date(draftFilters.date_to) : null}
-            onChange={(newValue) => {
-              const formattedDate = newValue ? newValue.toISOString().split('T')[0] : '';
-              handleDraftChange('date_to', formattedDate);
-            }}
-            slotProps={{
-              textField: {
-                size: "small",
-                sx: { minWidth: 140 }
-              }
-            }}
-          />
-        </LocalizationProvider>
+        <TextField
+          size="small"
+          label="Дата с (ДД.ММ.ГГГГ)"
+          placeholder="01.01.2024"
+          value={draftFilters.date_from}
+          onChange={e => handleDraftChange('date_from', e.target.value)}
+          sx={{ minWidth: 140 }}
+        />
+        <TextField
+          size="small"
+          label="Дата по (ДД.ММ.ГГГГ)"
+          placeholder="31.12.2024"
+          value={draftFilters.date_to}
+          onChange={e => handleDraftChange('date_to', e.target.value)}
+          sx={{ minWidth: 140 }}
+        />
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Ключ</InputLabel>
           <Select value={draftFilters.by} label="Ключ" onChange={e => handleDraftChange('by', e.target.value)}>

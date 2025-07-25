@@ -3,10 +3,6 @@ import { Box, Typography, Alert, TextField, Button, MenuItem, FormControl, Input
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import EditIcon from '@mui/icons-material/Edit';
 import TableChartIcon from '@mui/icons-material/TableChart';
-import { DatePicker } from '@mui/x-date-pickers';
-import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import ruLocale from 'date-fns/locale/ru';
 
 const columns = [
   'ФИО',
@@ -45,7 +41,7 @@ const byOptions = [
   { value: 'E-mail', label: 'E-mail' },
 ];
 
-const editLanguages = [ '', 'казахский', 'русский', 'английский', 'другое', 'неизвестно' ];
+const editLanguages = [ '', 'казахский', 'русский', 'английский', 'другой', 'неизвестно' ];
 
 // Карты value -> label для отображения выбранных значений
 const donorTypeMap = donorTypes.reduce((acc, o) => { if (o.value) acc[o.value] = o.label; return acc; }, {});
@@ -304,6 +300,12 @@ function CrmTable2025({ onProfile }) {
           const day = parseInt(parts[0], 10);
           const month = parseInt(parts[1], 10);
           const year = parseInt(parts[2], 10);
+          
+          // Валидация даты
+          if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100) {
+            return value;
+          }
+          
           date = new Date(year, month - 1, day);
         }
         // Формат YYYY-MM-DDTHH:MM:SS
@@ -350,11 +352,27 @@ function CrmTable2025({ onProfile }) {
     const API_BASE = import.meta.env.VITE_API_BASE_URL;
     fetch(`${API_BASE}/api/filter_users_excel_2025${query}`)
       .then(res => {
-        if (!res.ok) throw new Error('Ошибка загрузки данных CRM 2025');
+        if (!res.ok) {
+          if (res.status === 404) {
+            throw new Error('Данные не найдены. Возможно, нужно загрузить файлы Excel.');
+          } else if (res.status === 500) {
+            throw new Error('Ошибка сервера. Попробуйте позже.');
+          } else {
+            throw new Error(`Ошибка загрузки данных CRM 2025 (${res.status})`);
+          }
+        }
         return res.json();
       })
-      .then(setData)
-      .catch(err => setError(err.message))
+      .then(data => {
+        if (!Array.isArray(data)) {
+          throw new Error('Неверный формат данных от сервера');
+        }
+        setData(data);
+      })
+      .catch(err => {
+        console.error('API Error:', err);
+        setError(err.message);
+      })
       .finally(() => setLoading(false));
     setPage(1);
   }, [filters]);
@@ -423,36 +441,22 @@ function CrmTable2025({ onProfile }) {
             ))}
           </Select>
         </FormControl>
-        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ruLocale}>
-          <DatePicker
-            label="Дата с"
-            value={draftFilters.dateFrom ? new Date(draftFilters.dateFrom) : null}
-            onChange={(newValue) => {
-              const formattedDate = newValue ? newValue.toISOString().split('T')[0] : '';
-              handleDraftChange('dateFrom', formattedDate);
-            }}
-            slotProps={{
-              textField: {
-                size: "small",
-                sx: { minWidth: 140 }
-              }
-            }}
-          />
-          <DatePicker
-            label="Дата по"
-            value={draftFilters.dateTo ? new Date(draftFilters.dateTo) : null}
-            onChange={(newValue) => {
-              const formattedDate = newValue ? newValue.toISOString().split('T')[0] : '';
-              handleDraftChange('dateTo', formattedDate);
-            }}
-            slotProps={{
-              textField: {
-                size: "small",
-                sx: { minWidth: 140 }
-              }
-            }}
-          />
-        </LocalizationProvider>
+        <TextField
+          size="small"
+          label="Дата с (ДД.ММ.ГГГГ)"
+          placeholder="01.01.2025"
+          value={draftFilters.dateFrom}
+          onChange={e => handleDraftChange('dateFrom', e.target.value)}
+          sx={{ minWidth: 140 }}
+        />
+        <TextField
+          size="small"
+          label="Дата по (ДД.ММ.ГГГГ)"
+          placeholder="31.12.2025"
+          value={draftFilters.dateTo}
+          onChange={e => handleDraftChange('dateTo', e.target.value)}
+          sx={{ minWidth: 140 }}
+        />
         <TextField
           size="small"
           label="Мин. сумма"
