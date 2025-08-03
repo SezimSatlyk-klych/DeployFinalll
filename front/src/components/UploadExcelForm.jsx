@@ -38,7 +38,7 @@ const UploadTab = React.memo(function UploadTab({ source, setSource, files, setF
         onChange={e => setSource(e.target.value)}
         fullWidth
         sx={{ mb: 2, maxWidth: 400 }}
-        placeholder="Введите источник файла (необязательно)"
+        placeholder="Введите источник файла (обязательно)"
       />
       <Button
         variant="outlined"
@@ -226,13 +226,15 @@ function UploadExcelForm() {
       setError('Выберите хотя бы один файл Excel.');
       return;
     }
+    if (!source.trim()) {
+      setError('Пожалуйста, укажите источник файла.');
+      return;
+    }
     setLoading(true);
     try {
       const formData = new FormData();
       files.forEach((file) => formData.append('files', file));
-      if (source.trim()) {
-        formData.append('source', source);
-      }
+      formData.append('source', source.trim());
       const res = await fetch(`${API_BASE}/api/upload_excel`, {
         method: 'POST',
         body: formData,
@@ -241,14 +243,19 @@ function UploadExcelForm() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.detail || 'Ошибка загрузки файла');
       }
-      await res.json();
+      const data = await res.json();
       setSuccess('Файл(ы) успешно загружены!');
       setFiles([]);
       setSource('');
       // Обновляем список файлов после загрузки
       fetchFiles();
     } catch (err) {
-      setError(err.message);
+      console.error('Ошибка загрузки файла:', err);
+      if (err.message === '[object Object]') {
+        setError('Произошла ошибка при загрузке файла. Проверьте формат файла и попробуйте снова.');
+      } else {
+        setError(err.message || 'Произошла ошибка при загрузке файла');
+      }
     } finally {
       setLoading(false);
     }

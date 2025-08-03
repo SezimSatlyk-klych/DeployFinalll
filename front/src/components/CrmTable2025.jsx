@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Alert, TextField, Button, MenuItem, FormControl, InputLabel, Select, Dialog, DialogTitle, DialogContent, DialogActions, Checkbox, ListItemText, FormGroup, FormControlLabel } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { ru } from 'date-fns/locale';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import EditIcon from '@mui/icons-material/Edit';
 import TableChartIcon from '@mui/icons-material/TableChart';
@@ -69,7 +73,13 @@ function CrmTable2025({ onProfile }) {
       const thirtyMinutes = 30 * 60 * 1000; // 30 минут в миллисекундах
       
       if (now - savedTime < thirtyMinutes) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Конвертируем строки дат обратно в объекты Date
+        return {
+          ...parsed,
+          dateFrom: parsed.dateFrom ? new Date(parsed.dateFrom) : null,
+          dateTo: parsed.dateTo ? new Date(parsed.dateTo) : null,
+        };
       }
     }
     
@@ -79,8 +89,8 @@ function CrmTable2025({ onProfile }) {
     
     return {
       type: [],
-      dateFrom: '',
-      dateTo: '',
+      dateFrom: null,
+      dateTo: null,
       amountFrom: '',
       amountTo: '',
       gender: [],
@@ -102,14 +112,20 @@ function CrmTable2025({ onProfile }) {
       const thirtyMinutes = 30 * 60 * 1000;
       
       if (now - savedTime < thirtyMinutes) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Конвертируем строки дат обратно в объекты Date
+        return {
+          ...parsed,
+          dateFrom: parsed.dateFrom ? new Date(parsed.dateFrom) : null,
+          dateTo: parsed.dateTo ? new Date(parsed.dateTo) : null,
+        };
       }
     }
     
     return {
       type: [],
-      dateFrom: '',
-      dateTo: '',
+      dateFrom: null,
+      dateTo: null,
       amountFrom: '',
       amountTo: '',
       gender: [],
@@ -123,8 +139,8 @@ function CrmTable2025({ onProfile }) {
   const resetFilters = () => {
     const empty = {
       type: [],
-      dateFrom: '',
-      dateTo: '',
+      dateFrom: null,
+      dateTo: null,
       amountFrom: '',
       amountTo: '',
       gender: [],
@@ -153,9 +169,17 @@ function CrmTable2025({ onProfile }) {
     const newFilters = { ...draftFilters };
     setFilters(newFilters);
     // Сохраняем фильтры в localStorage с timestamp
-    localStorage.setItem('crm2025Filters', JSON.stringify(newFilters));
+    // Конвертируем даты в строки для сохранения
+    const filtersToSave = {
+      ...newFilters,
+      dateFrom: newFilters.dateFrom ? newFilters.dateFrom.toISOString().split('T')[0] : null,
+      dateTo: newFilters.dateTo ? newFilters.dateTo.toISOString().split('T')[0] : null,
+    };
+    localStorage.setItem('crm2025Filters', JSON.stringify(filtersToSave));
     localStorage.setItem('crm2025FiltersTimestamp', Date.now().toString());
   };
+  
+
 
   // helper to toggle value in array filter
   const toggleArrayValue = (key, value) => {
@@ -171,8 +195,8 @@ function CrmTable2025({ onProfile }) {
     try {
       const params = [];
       if (filters.type.length) filters.type.forEach(t=>params.push(`type=${encodeURIComponent(t)}`));
-      if (filters.dateFrom) params.push(`date_from=${encodeURIComponent(filters.dateFrom)}`);
-      if (filters.dateTo) params.push(`date_to=${encodeURIComponent(filters.dateTo)}`);
+      if (filters.dateFrom) params.push(`date_from=${encodeURIComponent(filters.dateFrom.toISOString().split('T')[0])}`);
+      if (filters.dateTo) params.push(`date_to=${encodeURIComponent(filters.dateTo.toISOString().split('T')[0])}`);
       if (filters.amountFrom) params.push(`amount_from=${encodeURIComponent(filters.amountFrom)}`);
       if (filters.amountTo) params.push(`amount_to=${encodeURIComponent(filters.amountTo)}`);
       if (filters.gender.length) filters.gender.forEach(g=>params.push(`gender=${encodeURIComponent(g)}`));
@@ -199,6 +223,8 @@ function CrmTable2025({ onProfile }) {
       setError(err.message);
     }
   };
+
+
 
   const handleEditClick = (row) => {
     setEditRow(row);
@@ -340,8 +366,8 @@ function CrmTable2025({ onProfile }) {
     setError('');
     const params = [];
     if (filters.type.length) filters.type.forEach(t=>params.push(`type=${encodeURIComponent(t)}`));
-    if (filters.dateFrom) params.push(`date_from=${encodeURIComponent(filters.dateFrom)}`);
-    if (filters.dateTo) params.push(`date_to=${encodeURIComponent(filters.dateTo)}`);
+    if (filters.dateFrom) params.push(`date_from=${encodeURIComponent(filters.dateFrom.toISOString().split('T')[0])}`);
+    if (filters.dateTo) params.push(`date_to=${encodeURIComponent(filters.dateTo.toISOString().split('T')[0])}`);
     if (filters.amountFrom) params.push(`amount_from=${encodeURIComponent(filters.amountFrom)}`);
     if (filters.amountTo) params.push(`amount_to=${encodeURIComponent(filters.amountTo)}`);
     if (filters.gender.length) filters.gender.forEach(g=>params.push(`gender=${encodeURIComponent(g)}`));
@@ -441,22 +467,20 @@ function CrmTable2025({ onProfile }) {
             ))}
           </Select>
         </FormControl>
-        <TextField
-          size="small"
-          label="Дата с (ДД.ММ.ГГГГ)"
-          placeholder="01.01.2025"
-          value={draftFilters.dateFrom}
-          onChange={e => handleDraftChange('dateFrom', e.target.value)}
-          sx={{ minWidth: 140 }}
-        />
-        <TextField
-          size="small"
-          label="Дата по (ДД.ММ.ГГГГ)"
-          placeholder="31.12.2025"
-          value={draftFilters.dateTo}
-          onChange={e => handleDraftChange('dateTo', e.target.value)}
-          sx={{ minWidth: 140 }}
-        />
+        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
+          <DatePicker
+            label="Дата с"
+            value={draftFilters.dateFrom}
+            onChange={(newValue) => handleDraftChange('dateFrom', newValue)}
+            slotProps={{ textField: { size: "small", sx: { minWidth: 140 } } }}
+          />
+          <DatePicker
+            label="Дата по"
+            value={draftFilters.dateTo}
+            onChange={(newValue) => handleDraftChange('dateTo', newValue)}
+            slotProps={{ textField: { size: "small", sx: { minWidth: 140 } } }}
+          />
+        </LocalizationProvider>
         <TextField
           size="small"
           label="Мин. сумма"

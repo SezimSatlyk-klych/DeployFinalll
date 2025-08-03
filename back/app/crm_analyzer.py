@@ -612,3 +612,156 @@ def debug_crm_data_by_year(db: Session = Depends(get_db)):
         }
     except Exception as e:
         return {"error": str(e)}
+
+
+
+
+@router.get("/ai/compare_periods", tags=["AI Analysis"])
+def compare_periods():
+    """Сравнивает данные CRM 2018-2024 и CRM 2025, предоставляет сравнительный анализ."""
+    try:
+        # Получаем данные CRM 2018-2024
+        db = SessionLocal()
+        try:
+            crm_entries = db.query(CRMEntry).all()
+            crm_raw_data = [entry.data for entry in crm_entries]
+            
+            if not crm_raw_data:
+                crm_raw_data = create_test_data_crm()
+            
+            crm_anonymized = anonymize_data(crm_raw_data)
+            crm_anonymized = convert_datetimes(crm_anonymized)
+            crm_aggregated = aggregate_trends(crm_anonymized)
+            crm_aggregated = convert_datetimes(crm_aggregated)
+        finally:
+            db.close()
+        
+        # Получаем данные CRM 2025
+        try:
+            from .merge_excel import all_users_data
+            excel_raw_data = all_users_data.copy()
+        except ImportError:
+            excel_raw_data = []
+        
+        if not excel_raw_data:
+            excel_raw_data = create_test_data_excel()
+        
+        excel_anonymized = anonymize_data(excel_raw_data)
+        excel_anonymized = convert_datetimes(excel_anonymized)
+        excel_aggregated = aggregate_trends(excel_anonymized)
+        excel_aggregated = convert_datetimes(excel_aggregated)
+        
+        # Создаем сравнительные метрики
+        comparison_metrics = {
+            "crm_2018_2024": {
+                "total_entries": crm_aggregated.get('total_entries', 0),
+                "total_donations": crm_aggregated.get('total_donations', 0),
+                "avg_donation": crm_aggregated.get('avg_donation', 0),
+                "max_donation": crm_aggregated.get('max_donation', 0),
+                "min_donation": crm_aggregated.get('min_donation', 0),
+                "donation_count": crm_aggregated.get('donation_count', 0)
+            },
+            "crm_2025": {
+                "total_entries": excel_aggregated.get('total_entries', 0),
+                "total_donations": excel_aggregated.get('total_donations', 0),
+                "avg_donation": excel_aggregated.get('avg_donation', 0),
+                "max_donation": excel_aggregated.get('max_donation', 0),
+                "min_donation": excel_aggregated.get('min_donation', 0),
+                "donation_count": excel_aggregated.get('donation_count', 0)
+            }
+        }
+        
+        # Вычисляем изменения в процентах
+        changes = {}
+        for metric in ['total_entries', 'total_donations', 'avg_donation', 'max_donation', 'min_donation', 'donation_count']:
+            old_value = comparison_metrics["crm_2018_2024"][metric]
+            new_value = comparison_metrics["crm_2025"][metric]
+            
+            if old_value != 0:
+                change_percent = ((new_value - old_value) / old_value) * 100
+                changes[metric] = {
+                    "absolute_change": new_value - old_value,
+                    "percent_change": round(change_percent, 2),
+                    "trend": "increase" if change_percent > 0 else "decrease" if change_percent < 0 else "stable"
+                }
+            else:
+                changes[metric] = {
+                    "absolute_change": new_value,
+                    "percent_change": 100 if new_value > 0 else 0,
+                    "trend": "increase" if new_value > 0 else "stable"
+                }
+        
+        # Генерируем AI анализ сравнения
+        comparison_prompt = f"""
+        Сравнительный анализ данных донорской организации за два периода:
+        
+        ПЕРИОД 2018-2024:
+        - Общее количество записей: {comparison_metrics["crm_2018_2024"]["total_entries"]}
+        - Общая сумма донатов: {comparison_metrics["crm_2018_2024"]["total_donations"]}
+        - Средний донат: {comparison_metrics["crm_2018_2024"]["avg_donation"]}
+        - Максимальный донат: {comparison_metrics["crm_2018_2024"]["max_donation"]}
+        - Минимальный донат: {comparison_metrics["crm_2018_2024"]["min_donation"]}
+        - Количество донатов: {comparison_metrics["crm_2018_2024"]["donation_count"]}
+        
+        ПЕРИОД 2025:
+        - Общее количество записей: {comparison_metrics["crm_2025"]["total_entries"]}
+        - Общая сумма донатов: {comparison_metrics["crm_2025"]["total_donations"]}
+        - Средний донат: {comparison_metrics["crm_2025"]["avg_donation"]}
+        - Максимальный донат: {comparison_metrics["crm_2025"]["max_donation"]}
+        - Минимальный донат: {comparison_metrics["crm_2025"]["min_donation"]}
+        - Количество донатов: {comparison_metrics["crm_2025"]["donation_count"]}
+        
+        ИЗМЕНЕНИЯ:
+        - Количество записей: {changes.get("total_entries", {}).get("percent_change", 0)}% ({changes.get("total_entries", {}).get("trend", "stable")})
+        - Сумма донатов: {changes.get("total_donations", {}).get("percent_change", 0)}% ({changes.get("total_donations", {}).get("trend", "stable")})
+        - Средний донат: {changes.get("avg_donation", {}).get("percent_change", 0)}% ({changes.get("avg_donation", {}).get("trend", "stable")})
+        - Максимальный донат: {changes.get("max_donation", {}).get("percent_change", 0)}% ({changes.get("max_donation", {}).get("trend", "stable")})
+        - Минимальный донат: {changes.get("min_donation", {}).get("percent_change", 0)}% ({changes.get("min_donation", {}).get("trend", "stable")})
+        - Количество донатов: {changes.get("donation_count", {}).get("percent_change", 0)}% ({changes.get("donation_count", {}).get("trend", "stable")})
+        
+        Проанализируй эти данные и предоставь:
+        1. Ключевые изменения между периодами
+        2. Тренды и паттерны
+        3. Возможные причины изменений
+        4. Рекомендации для улучшения
+        5. Прогноз на будущее
+        
+        Отвечай на русском языке, структурированно и профессионально.
+        """
+        
+        ai_response = client.chat.completions.create(
+            model=DEPLOY,
+            messages=[
+                {"role": "system", "content": "Ты - эксперт по анализу данных донорских организаций. Отвечай на русском языке."},
+                {"role": "user", "content": comparison_prompt}
+            ],
+            max_tokens=2000,
+            temperature=0.7
+        )
+        comparison_analysis = ai_response.choices[0].message.content
+        
+        return {
+            "comparison_metrics": comparison_metrics,
+            "changes": changes,
+            "ai_analysis": comparison_analysis,
+            "analysis_timestamp": datetime.now().isoformat(),
+            "periods": {
+                "crm_2018_2024": {
+                    "aggregated_statistics": crm_aggregated,
+                    "data_summary": {
+                        "total_records": len(crm_raw_data),
+                        "anonymized_records": len(crm_anonymized)
+                    }
+                },
+                "crm_2025": {
+                    "aggregated_statistics": excel_aggregated,
+                    "data_summary": {
+                        "total_records": len(excel_raw_data),
+                        "anonymized_records": len(excel_anonymized)
+                    }
+                }
+            }
+        }
+    except Exception as e:
+        print(f"ERROR: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ошибка сравнения периодов: {str(e)}")

@@ -9,6 +9,18 @@ from fastapi.responses import StreamingResponse
 
 router = APIRouter()
 
+def get_month_from_date_string(date_str):
+    if not date_str or pd.isnull(date_str):
+        return None
+    try:
+        date_str = str(date_str).strip()
+        if date_str.lower() in ['nan', 'nat', 'none', '']:
+            return None
+        parsed_date = pd.to_datetime(date_str, errors='coerce', dayfirst=True)
+        return parsed_date.month if pd.notnull(parsed_date) else None
+    except:
+        return None
+
 # Словарь синонимов для унификации полей
 FIELD_SYNONYMS = {
     "Дата": ["Дата", "Дата платежа"],
@@ -20,97 +32,88 @@ FIELD_SYNONYMS = {
 # Глобальное хранилище для всех загруженных пользователей (на время жизни процесса)
 all_users_data = []
 
+
+
 @router.post("/upload_excel_2025", tags=["Excel"])
 async def upload_excel_2025(
     files: List[UploadFile] = File(...),
-    sources: List[str] = Form(...)
+    sources: str = Form(None)
 ):
     global all_users_data
-    dataframes = []
-    for file, source in zip(files, sources):
-        content = await file.read()
-        excel = pd.read_excel(io.BytesIO(content), sheet_name=None)
-        original_filename = file.filename  # Сохраняем название файла
-        for sheet_name, sheet_df in excel.items():
-            sheet_df['month'] = sheet_name  # Добавляем столбец с названием листа
-            sheet_df['источник'] = source   # Добавляем столбец источник
-            sheet_df['filename'] = original_filename  # Добавляем название файла
-            
-            # Правильная обработка дат
-            for col in sheet_df.columns:
-                if 'дата' in col.lower() or 'date' in col.lower():
-                    # Пытаемся преобразовать в datetime
-                    try:
-                        sheet_df[col] = pd.to_datetime(sheet_df[col], errors='coerce')
-                        # Преобразуем в строку в формате DD.MM.YYYY
-                        sheet_df[col] = sheet_df[col].dt.strftime('%d.%m.%Y')
-                    except:
-                        pass
-            
-            dataframes.append(sheet_df)
+    print(f"DEBUG: Получен запрос на загрузку {len(files)} файлов")
+    print(f"DEBUG: Источники: {sources}")
+    try:
+        all_entries = []
+        month_names = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                       'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+        
+        for file in files:
+            print(f"DEBUG: Обрабатываем файл {file.filename}")
+            try:
+                content = await file.read()
+                print(f"DEBUG: Размер файла {file.filename}: {len(content)} байт")
+                excel = pd.ExcelFile(io.BytesIO(content))
+                print(f"DEBUG: Листы в файле {file.filename}: {excel.sheet_names}")
+                original_filename = file.filename
+                
+                for sheet_name in excel.sheet_names:
+                    print(f"DEBUG: Обрабатываем лист {sheet_name}")
+                    df = pd.read_excel(excel, sheet_name=sheet_name)
+                    print(f"DEBUG: Размер листа {sheet_name}: {len(df)} строк")
+                    
+                    for _, row in df.iterrows():
+                        row_data = row.to_dict()
+                        # Удаляем все варианты ключа 'month' или 'месяц'
+                        for key in list(row_data.keys()):
+                            if key.strip().lower() in ['month', 'месяц']:
+                                del row_data[key]
+                        
+                        # Добавляем определение месяца
+                        if sheet_name in month_names:
+                            row_data['month'] = sheet_name
+                        else:
+                            # Пробуем взять месяц из поля "Дата" или "Дата и время"
+                            date_field = None
+                            for k in row_data:
+                                if k.strip().lower() in ['дата', 'дата и время', 'date', 'datetime']:
+                                    date_field = row_data[k]
+                                    break
+                            month_num = get_month_from_date_string(date_field)
+                            row_data['month'] = month_names[month_num - 1] if month_num and 1 <= month_num <= 12 else None
 
-    # Собираем все уникальные столбцы
-    all_columns = set()
-    for df in dataframes:
-        all_columns.update(df.columns)
-    all_columns = list(all_columns)
+                        if row_data['month'] is not None:
+                            # Добавляем источник и filename
+                            if sources and sources.strip():
+                                row_data['источник'] = sources
+                            else:
+                                row_data['источник'] = original_filename.replace('.xlsx', '').replace('.xls', '')
+                            row_data['filename'] = original_filename
+                            
+                            # Добавляем уникальный id
+                            next_id = len(all_users_data) + len(all_entries) + 1
+                            row_data['id'] = next_id
+                            
+                            all_entries.append(row_data)
+                            
+            except Exception as e:
+                print(f"ERROR: Ошибка обработки файла {file.filename}: {str(e)}")
+                raise HTTPException(status_code=400, detail=f"Ошибка обработки файла {file.filename}: {str(e)}")
 
-    # Приводим все датафреймы к общему набору столбцов
-    normalized_dfs = []
-    for df in dataframes:
-        for col in all_columns:
-            if col not in df.columns:
-                df[col] = None
-        normalized_dfs.append(df[all_columns])
+        if not all_entries:
+            print("DEBUG: Нет валидных данных для сохранения")
+            return {"status": "no_valid_data"}
 
-    # Объединяем все строки
-    result_df = pd.concat(normalized_dfs, ignore_index=True)
-
-    # Заменяем NaN, inf, -inf на None для корректного JSON
-    result_df = result_df.replace([np.nan, np.inf, -np.inf], None)
-
-    # Преобразуем в список словарей
-    result = result_df.to_dict(orient='records')
-
-    # Унификация полей по синонимам и сортировка
-    final_result = []
-    next_id = len(all_users_data) + 1
-    for row in result:
-        # Унификация полей
-        for main_field, synonyms in FIELD_SYNONYMS.items():
-            value = None
-            for syn in synonyms:
-                if row.get(syn) not in [None, '', [], {}]:
-                    value = row[syn]
-                    break
-            row[main_field] = value
-            # Удаляем все синонимы, кроме основного
-            for syn in synonyms:
-                if syn != main_field and syn in row:
-                    del row[syn]
-        # Фильтрация и коррекция полей (если нужно)
-        # ...
-        # Сортировка: сначала заполненные, потом пустые
-        not_null = {k: v for k, v in row.items() if v not in [None, '', [], {}] and k not in ["источник", "filename"]}
-        is_null = {k: v for k, v in row.items() if v in [None, '', [], {}] and k not in ["источник", "filename"]}
-        ordered_row = {**not_null, **is_null}
-        # Добавляем телефон и язык, даже если их нет
-        if "телефон" not in ordered_row:
-            ordered_row["телефон"] = None
-        if "язык" not in ordered_row:
-            ordered_row["язык"] = None
-        # Поля 'источник' и 'filename' всегда в конце
-        if "источник" in row:
-            ordered_row["источник"] = row["источник"]
-        if "filename" in row:
-            ordered_row["filename"] = row["filename"]
-        # Добавляем уникальный id
-        ordered_row["id"] = next_id
-        next_id += 1
-        final_result.append(ordered_row)
-
-    all_users_data.extend(final_result)
-    return final_result
+        # Добавляем все записи в глобальное хранилище
+        all_users_data.extend(all_entries)
+        print(f"DEBUG: Успешно добавлено {len(all_entries)} записей в all_users_data")
+        return {"status": "success", "saved": len(all_entries)}
+        
+    except Exception as e:
+        print(f"ERROR: Общая ошибка в upload_excel_2025: {str(e)}")
+        print(f"ERROR: Тип ошибки: {type(e)}")
+        import traceback
+        print(f"ERROR: Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Ошибка загрузки файлов: {str(e)}")
 
 @router.get("/count_users_excel_2025", tags=["Excel"])
 def count_users_excel_2025():

@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Alert, TextField, Button, FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { ru } from 'date-fns/locale';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 
@@ -17,6 +21,7 @@ function CrmTable({ refresh, onProfile }) {
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
   const [donorType, setDonorType] = useState('');
+  
   const donorTypes = [
     { value: 'single', label: 'Разовый' },
     { value: 'periodic', label: 'Периодический' },
@@ -43,7 +48,13 @@ function CrmTable({ refresh, onProfile }) {
       const thirtyMinutes = 30 * 60 * 1000; // 30 минут в миллисекундах
       
       if (now - savedTime < thirtyMinutes) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Конвертируем строки дат обратно в объекты Date
+        return {
+          ...parsed,
+          date_from: parsed.date_from ? new Date(parsed.date_from) : null,
+          date_to: parsed.date_to ? new Date(parsed.date_to) : null,
+        };
       }
     }
     
@@ -54,8 +65,8 @@ function CrmTable({ refresh, onProfile }) {
     return {
       amount_from: '',
       amount_to: '',
-      date_from: '',
-      date_to: '',
+      date_from: null,
+      date_to: null,
       source: '',
       type: [], // массив для мультиселекта
       by: '',   // новый фильтр
@@ -73,15 +84,21 @@ function CrmTable({ refresh, onProfile }) {
       const thirtyMinutes = 30 * 60 * 1000;
       
       if (now - savedTime < thirtyMinutes) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Конвертируем строки дат обратно в объекты Date
+        return {
+          ...parsed,
+          date_from: parsed.date_from ? new Date(parsed.date_from) : null,
+          date_to: parsed.date_to ? new Date(parsed.date_to) : null,
+        };
       }
     }
     
     return {
       amount_from: '',
       amount_to: '',
-      date_from: '',
-      date_to: '',
+      date_from: null,
+      date_to: null,
       source: '',
       type: [],
       by: '',
@@ -95,11 +112,19 @@ function CrmTable({ refresh, onProfile }) {
     const newFilters = { ...draftFilters };
     setFilters(newFilters);
     // Сохраняем фильтры в localStorage с timestamp
-    localStorage.setItem('crmFilters', JSON.stringify(newFilters));
+    // Конвертируем даты в строки для сохранения
+    const filtersToSave = {
+      ...newFilters,
+      date_from: newFilters.date_from ? newFilters.date_from.toISOString().split('T')[0] : null,
+      date_to: newFilters.date_to ? newFilters.date_to.toISOString().split('T')[0] : null,
+    };
+    localStorage.setItem('crmFilters', JSON.stringify(filtersToSave));
     localStorage.setItem('crmFiltersTimestamp', Date.now().toString());
   };
+  
+
   const handleResetFilters = () => {
-    const emptyFilters = { year: '', month: '', amount_from: '', amount_to: '', date_from: '', date_to: '', source: '', type: [], by: '' };
+    const emptyFilters = { amount_from: '', amount_to: '', date_from: null, date_to: null, source: '', type: [], by: '' };
     setDraftFilters(emptyFilters);
     setFilters(emptyFilters);
     // Очищаем фильтры в localStorage
@@ -113,8 +138,8 @@ function CrmTable({ refresh, onProfile }) {
       const params = [];
       if (filters.amount_from) params.push(`amount_from=${encodeURIComponent(filters.amount_from)}`);
       if (filters.amount_to) params.push(`amount_to=${encodeURIComponent(filters.amount_to)}`);
-      if (filters.date_from) params.push(`date_from=${encodeURIComponent(filters.date_from)}`);
-      if (filters.date_to) params.push(`date_to=${encodeURIComponent(filters.date_to)}`);
+      if (filters.date_from) params.push(`date_from=${encodeURIComponent(filters.date_from.toISOString().split('T')[0])}`);
+      if (filters.date_to) params.push(`date_to=${encodeURIComponent(filters.date_to.toISOString().split('T')[0])}`);
       if (filters.source) params.push(`source=${encodeURIComponent(filters.source)}`);
       if (filters.type.length) filters.type.forEach(t=>params.push(`type=${encodeURIComponent(t)}`));
       if (filters.by) params.push(`by=${encodeURIComponent(filters.by)}`);
@@ -137,6 +162,8 @@ function CrmTable({ refresh, onProfile }) {
       alert(err.message);
     }
   };
+
+
 
   // Функция для проверки и очистки устаревших фильтров
   const checkAndClearStaleFilters = () => {
@@ -169,8 +196,8 @@ function CrmTable({ refresh, onProfile }) {
     const params = [];
     if (filters.amount_from) params.push(`amount_from=${encodeURIComponent(filters.amount_from)}`);
     if (filters.amount_to) params.push(`amount_to=${encodeURIComponent(filters.amount_to)}`);
-    if (filters.date_from) params.push(`date_from=${encodeURIComponent(filters.date_from)}`);
-    if (filters.date_to) params.push(`date_to=${encodeURIComponent(filters.date_to)}`);
+    if (filters.date_from) params.push(`date_from=${encodeURIComponent(filters.date_from.toISOString().split('T')[0])}`);
+    if (filters.date_to) params.push(`date_to=${encodeURIComponent(filters.date_to.toISOString().split('T')[0])}`);
     if (filters.source) params.push(`source=${encodeURIComponent(filters.source)}`);
     if (filters.type.length) filters.type.forEach(t=>params.push(`type=${encodeURIComponent(t)}`));
     if (filters.by) params.push(`by=${encodeURIComponent(filters.by)}`);
@@ -371,22 +398,20 @@ function CrmTable({ refresh, onProfile }) {
           onChange={e => handleDraftChange('amount_to', e.target.value)}
           sx={{ minWidth: 100 }}
         />
-        <TextField
-          size="small"
-          label="Дата с (ДД.ММ.ГГГГ)"
-          placeholder="01.01.2024"
-          value={draftFilters.date_from}
-          onChange={e => handleDraftChange('date_from', e.target.value)}
-          sx={{ minWidth: 140 }}
-        />
-        <TextField
-          size="small"
-          label="Дата по (ДД.ММ.ГГГГ)"
-          placeholder="31.12.2024"
-          value={draftFilters.date_to}
-          onChange={e => handleDraftChange('date_to', e.target.value)}
-          sx={{ minWidth: 140 }}
-        />
+        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
+          <DatePicker
+            label="Дата с"
+            value={draftFilters.date_from}
+            onChange={(newValue) => handleDraftChange('date_from', newValue)}
+            slotProps={{ textField: { size: "small", sx: { minWidth: 140 } } }}
+          />
+          <DatePicker
+            label="Дата по"
+            value={draftFilters.date_to}
+            onChange={(newValue) => handleDraftChange('date_to', newValue)}
+            slotProps={{ textField: { size: "small", sx: { minWidth: 140 } } }}
+          />
+        </LocalizationProvider>
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Ключ</InputLabel>
           <Select value={draftFilters.by} label="Ключ" onChange={e => handleDraftChange('by', e.target.value)}>

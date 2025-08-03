@@ -7,14 +7,16 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import RemoveIcon from '@mui/icons-material/Remove';
 
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_URL = 'http://localhost:8000/api';
+const VERSION = Date.now(); // Добавляем версию для принудительного обновления кэша
 
 const endpoints = [
   {
     label: 'Анализировать CRM 2018-2024',
-    endpoint: `${API_URL}/api/ai/analyze_crm_only`,
+    endpoint: `${API_URL}/ai/analyze_crm_only`,
     icon: <AnalyticsIcon sx={{ mr: 1 }} />,
     key: 'crm',
     color: '#2196F3',
@@ -22,11 +24,19 @@ const endpoints = [
   },
   {
     label: 'Анализировать CRM 2025',
-    endpoint: `${API_URL}/api/ai/analyze_excel_2025_only`,
+    endpoint: `${API_URL}/ai/analyze_excel_2025_only`,
     icon: <BarChartIcon sx={{ mr: 1 }} />,
     key: 'excel2025',
     color: '#FF6B6B',
     gradient: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%)',
+  },
+  {
+    label: 'Сравнить периоды',
+    endpoint: `${API_URL}/ai/compare_periods`,
+    icon: <AssessmentIcon sx={{ mr: 1 }} />,
+    key: 'comparison',
+    color: '#9C27B0',
+    gradient: 'linear-gradient(135deg, #9C27B0 0%, #BA68C8 100%)',
   },
 ];
 
@@ -153,7 +163,207 @@ function MetricsCards({ stats }) {
   );
 }
 
+function ComparisonMetricsCards({ comparisonData }) {
+  if (!comparisonData || !comparisonData.comparison_metrics) return null;
 
+  const { comparison_metrics, changes } = comparisonData;
+  
+  const metrics = [
+    {
+      title: 'Общее количество',
+      oldValue: comparison_metrics.crm_2018_2024.total_entries,
+      newValue: comparison_metrics.crm_2025.total_entries,
+      change: changes.total_entries,
+      icon: <TrendingUpIcon />,
+      color: '#2196F3',
+      unit: 'записей',
+    },
+    {
+      title: 'Общая сумма',
+      oldValue: comparison_metrics.crm_2018_2024.total_donations,
+      newValue: comparison_metrics.crm_2025.total_donations,
+      change: changes.total_donations,
+      icon: <TrendingUpIcon />,
+      color: '#4CAF50',
+      unit: '₸',
+    },
+    {
+      title: 'Средний донат',
+      oldValue: comparison_metrics.crm_2018_2024.avg_donation,
+      newValue: comparison_metrics.crm_2025.avg_donation,
+      change: changes.avg_donation,
+      icon: <TrendingUpIcon />,
+      color: '#FF9800',
+      unit: '₸',
+    },
+    {
+      title: 'Максимальный донат',
+      oldValue: comparison_metrics.crm_2018_2024.max_donation,
+      newValue: comparison_metrics.crm_2025.max_donation,
+      change: changes.max_donation,
+      icon: <TrendingUpIcon />,
+      color: '#F44336',
+      unit: '₸',
+    },
+    {
+      title: 'Минимальный донат',
+      oldValue: comparison_metrics.crm_2018_2024.min_donation,
+      newValue: comparison_metrics.crm_2025.min_donation,
+      change: changes.min_donation,
+      icon: <TrendingDownIcon />,
+      color: '#9C27B0',
+      unit: '₸',
+    },
+    {
+      title: 'Количество донатов',
+      oldValue: comparison_metrics.crm_2018_2024.donation_count,
+      newValue: comparison_metrics.crm_2025.donation_count,
+      change: changes.donation_count,
+      icon: <AnalyticsIcon />,
+      color: '#00BCD4',
+      unit: 'донатов',
+    },
+  ];
+
+  return (
+    <Grid container spacing={2} sx={{ mb: 3 }}>
+      {metrics.map((metric, index) => {
+        const isPositive = metric.change.percent_change > 0;
+        const isNegative = metric.change.percent_change < 0;
+        const isNeutral = metric.change.percent_change === 0;
+        
+        const changeColor = isPositive ? '#10B981' : isNegative ? '#EF4444' : '#6B7280';
+        const changeBgColor = isPositive ? '#D1FAE5' : isNegative ? '#FEE2E2' : '#F3F4F6';
+        const changeIcon = isPositive ? <TrendingUpIcon /> : isNegative ? <TrendingDownIcon /> : <RemoveIcon />;
+        
+        return (
+          <Grid item xs={12} sm={6} lg={4} key={index}>
+            <Grow in={true} timeout={300 + index * 100}>
+              <Card sx={{ 
+                height: '100%',
+                borderRadius: 2,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s ease',
+                border: `2px solid ${changeColor}20`,
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 4px 12px ${changeColor}30`,
+                }
+              }}>
+                <CardContent sx={{ p: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Box sx={{ 
+                        background: `${metric.color}20`,
+                        borderRadius: 1,
+                        p: 0.5,
+                        mr: 1.5
+                      }}>
+                        {React.cloneElement(metric.icon, { 
+                          sx: { fontSize: 20, color: metric.color } 
+                        })}
+                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.85rem', color: '#374151' }}>
+                        {metric.title}
+                      </Typography>
+                    </Box>
+                    
+                    {/* Индикатор изменения */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      background: changeBgColor,
+                      borderRadius: 1,
+                      px: 1,
+                      py: 0.5
+                    }}>
+                      {React.cloneElement(changeIcon, { 
+                        sx: { fontSize: 16, color: changeColor, mr: 0.5 } 
+                      })}
+                      <Typography variant="caption" sx={{ 
+                        fontWeight: 600, 
+                        color: changeColor,
+                        fontSize: '0.75rem'
+                      }}>
+                        {metric.change.percent_change > 0 ? '+' : ''}{metric.change.percent_change}%
+                      </Typography>
+                    </Box>
+                  </Box>
+                  
+                  {/* Основные значения */}
+                  <Box sx={{ mb: 1.5 }}>
+                    <Typography variant="h5" sx={{ 
+                      fontWeight: 700, 
+                      color: '#1E293B', 
+                      mb: 0.5,
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      {formatNumber(metric.newValue)}
+                      <Typography variant="body2" sx={{ 
+                        ml: 0.5, 
+                        color: '#64748B', 
+                        fontWeight: 400 
+                      }}>
+                        {metric.unit}
+                      </Typography>
+                    </Typography>
+                    
+                    <Typography variant="body2" sx={{ 
+                      color: '#64748B', 
+                      fontSize: '0.8rem',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      было: {formatNumber(metric.oldValue)} {metric.unit}
+                    </Typography>
+                  </Box>
+                  
+                  {/* Визуальный индикатор изменения */}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    background: '#F8FAFC',
+                    borderRadius: 1,
+                    p: 1,
+                    border: '1px solid #E2E8F0'
+                  }}>
+                    <Typography variant="caption" sx={{ 
+                      color: '#64748B',
+                      fontSize: '0.7rem'
+                    }}>
+                      Изменение: {metric.change.absolute_change > 0 ? '+' : ''}{formatNumber(metric.change.absolute_change)} {metric.unit}
+                    </Typography>
+                    
+                    <Box sx={{ 
+                      width: 60, 
+                      height: 4, 
+                      background: '#E2E8F0', 
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      position: 'relative'
+                    }}>
+                      <Box sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        height: '100%',
+                        width: `${Math.min(Math.abs(metric.change.percent_change), 100)}%`,
+                        background: changeColor,
+                        borderRadius: 2
+                      }} />
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grow>
+          </Grid>
+        );
+      })}
+    </Grid>
+  );
+}
 
 function getMonthBarData(monthStats) {
   if (!monthStats) return [];
@@ -190,8 +400,6 @@ function StatsTable({ title, stats }) {
   if (stats.top_month_by_count) tableData.push({ key: 'Топ месяц по количеству', value: stats.top_month_by_count });
   if (stats.min_month_by_sum) tableData.push({ key: 'Минимальный месяц по сумме', value: stats.min_month_by_sum });
   if (stats.min_month_by_count) tableData.push({ key: 'Минимальный месяц по количеству', value: stats.min_month_by_count });
-  
-
   
   if (tableData.length === 0) return null;
   
@@ -369,6 +577,8 @@ function EmptyState({ icon, title, description }) {
   );
 }
 
+
+
 export default function AiAnalysisPage() {
   const [loading, setLoading] = useState({});
   const [results, setResults] = useState(() => {
@@ -414,20 +624,25 @@ export default function AiAnalysisPage() {
   });
 
   const handleAnalyze = async (key, url) => {
+    console.log('handleAnalyze called with key:', key, 'url:', url);
     setLoading(prev => ({ ...prev, [key]: true }));
     setError('');
     try {
       const response = await fetch(url);
+      console.log('Response status:', response.status);
       if (!response.ok) {
         throw new Error('Ошибка анализа');
       }
       const data = await response.json();
+      console.log('Received data for', key, ':', data);
       const newResults = { ...results, [key]: data };
+      console.log('New results:', newResults);
       setResults(newResults);
       // Сохраняем результаты в localStorage с timestamp
       localStorage.setItem('aiAnalysisResults', JSON.stringify(newResults));
       localStorage.setItem('aiAnalysisTimestamp', Date.now().toString());
     } catch (err) {
+      console.error('Error in handleAnalyze:', err);
       setError(err.message);
     } finally {
       setLoading(prev => ({ ...prev, [key]: false }));
@@ -602,7 +817,7 @@ export default function AiAnalysisPage() {
               icon={<AutoAwesomeIcon />}
               sx={{ fontWeight: 600 }}
             />
-            {(results.crm || results.excel2025) && (
+            {(results.crm || results.excel2025 || results.comparison) && (
               <Button
                 variant="outlined"
                 size="small"
@@ -617,7 +832,7 @@ export default function AiAnalysisPage() {
                   }
                 }}
               >
-                Сбросить данные
+                Сбросить фильтры
               </Button>
             )}
           </Box>
@@ -683,6 +898,7 @@ export default function AiAnalysisPage() {
             >
               <Tab label="CRM 2018-2024" value={0} />
               <Tab label="CRM 2025" value={1} />
+              <Tab label="Сравнение периодов" value={2} />
             </Tabs>
           </Box>
 
@@ -970,9 +1186,215 @@ export default function AiAnalysisPage() {
                 </Box>
               </Fade>
             )}
+
+            {/* Сравнение периодов Content */}
+            {activeTab === 2 && (
+              <Fade in={true} timeout={300}>
+                <Box>
+                  {/* Action Card */}
+                  <Card sx={{ 
+                    mb: 3,
+                    background: 'linear-gradient(135deg, #9C27B0 0%, #BA68C8 100%)',
+                    color: 'white',
+                    borderRadius: 2,
+                    boxShadow: '0 4px 16px rgba(156, 39, 176, 0.2)',
+                    width: '100%'
+                  }}>
+                    <CardContent sx={{ p: 3 }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: 2
+                      }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                          <AssessmentIcon sx={{ mr: 2, fontSize: 32 }} />
+                          <Box>
+                            <Typography variant="h5" fontWeight={700} sx={{ mb: 0.5 }}>
+                              Сравнение периодов
+                            </Typography>
+                            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                              Сравнительный анализ CRM 2018-2024 и CRM 2025
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button
+                            variant="contained"
+                            size="large"
+                            onClick={() => handleAnalyze('comparison', endpoints[2].endpoint)}
+                            disabled={loading['comparison']}
+                            sx={{
+                              background: 'rgba(255, 255, 255, 0.2)',
+                              borderRadius: 1.5,
+                              px: 3,
+                              py: 1,
+                              fontSize: 14,
+                              fontWeight: 600,
+                              textTransform: 'none',
+                              backdropFilter: 'blur(10px)',
+                              border: '1px solid rgba(255, 255, 255, 0.3)',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                              '&:hover': {
+                                background: 'rgba(255, 255, 255, 0.3)',
+                                transform: 'translateY(-1px)',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                              },
+                              '&:disabled': {
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                transform: 'none',
+                              }
+                            }}
+                          >
+                            {loading['comparison'] ? (
+                              <CircularProgress size={18} sx={{ color: 'white', mr: 1 }} />
+                            ) : (
+                              endpoints[2].icon
+                            )}
+                            {endpoints[2].label}
+                          </Button>
+                          
+                          {results.comparison && (
+                            <Button
+                              variant="outlined"
+                              size="large"
+                              onClick={() => {
+                                const newResults = { ...results };
+                                delete newResults.comparison;
+                                setResults(newResults);
+                                localStorage.setItem('aiAnalysisResults', JSON.stringify(newResults));
+                              }}
+                              sx={{
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                borderColor: 'rgba(255, 255, 255, 0.3)',
+                                color: 'white',
+                                borderRadius: 1.5,
+                                px: 3,
+                                py: 1,
+                                fontSize: 14,
+                                fontWeight: 600,
+                                textTransform: 'none',
+                                backdropFilter: 'blur(10px)',
+                                '&:hover': {
+                                  background: 'rgba(255, 255, 255, 0.2)',
+                                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                                }
+                              }}
+                            >
+                              Сбросить фильтры
+                            </Button>
+                          )}
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                  
+                  {console.log('Rendering comparison tab, results.comparison:', results.comparison)}
+                  {results.comparison ? (
+                    <Fade in={true} timeout={500}>
+                      <Box>
+                        <ComparisonMetricsCards comparisonData={results.comparison} />
+                        
+                        {/* AI Analysis Card */}
+                        {results.comparison.ai_analysis && (
+                          <Card sx={{ 
+                            mb: 3, 
+                            borderRadius: 2,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                            overflow: 'hidden',
+                            width: '100%'
+                          }}>
+                            <Box sx={{ 
+                              background: 'linear-gradient(135deg, #9C27B0 0%, #BA68C8 100%)',
+                              p: 2,
+                              color: 'white'
+                            }}>
+                              <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                                <AutoAwesomeIcon sx={{ mr: 1.5 }} />
+                                AI Сравнительный анализ
+                              </Typography>
+                              <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
+                                Дата анализа: {results.comparison.analysis_timestamp && new Date(results.comparison.analysis_timestamp).toLocaleString('ru-RU')}
+                              </Typography>
+                            </Box>
+                            <CardContent sx={{ p: 3 }}>
+                              <Box sx={{ 
+                                background: '#FAFBFC',
+                                borderRadius: 2,
+                                p: 2,
+                                border: '1px solid #E2E8F0'
+                              }}>
+                                {formatAnalysisText(results.comparison.ai_analysis)}
+                              </Box>
+                            </CardContent>
+                          </Card>
+                        )}
+                        
+                        {/* Periods Comparison Grid */}
+                        <Grid container spacing={2} sx={{ mb: 3 }}>
+                          <Grid item xs={12} lg={6}>
+                            <Card sx={{ 
+                              height: '100%',
+                              borderRadius: 2,
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                              overflow: 'hidden'
+                            }}>
+                              <Box sx={{ 
+                                background: 'linear-gradient(135deg, #2196F3 0%, #21CBF3 100%)',
+                                p: 2,
+                                color: 'white'
+                              }}>
+                                <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                                  <AnalyticsIcon sx={{ mr: 1.5 }} />
+                                  CRM 2018-2024
+                                </Typography>
+                              </Box>
+                              <CardContent sx={{ p: 2 }}>
+                                <StatsTable title="Статистика периода" stats={results.comparison.periods?.crm_2018_2024?.aggregated_statistics} />
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                          <Grid item xs={12} lg={6}>
+                            <Card sx={{ 
+                              height: '100%',
+                              borderRadius: 2,
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                              overflow: 'hidden'
+                            }}>
+                              <Box sx={{ 
+                                background: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%)',
+                                p: 2,
+                                color: 'white'
+                              }}>
+                                <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                                  <BarChartIcon sx={{ mr: 1.5 }} />
+                                  CRM 2025
+                                </Typography>
+                              </Box>
+                              <CardContent sx={{ p: 2 }}>
+                                <StatsTable title="Статистика периода" stats={results.comparison.periods?.crm_2025?.aggregated_statistics} />
+                              </CardContent>
+                            </Card>
+                          </Grid>
+                        </Grid>
+                      </Box>
+                    </Fade>
+                  ) : (
+                    <EmptyState 
+                      icon={<AssessmentIcon />}
+                      title="Сравнение не выполнено"
+                      description="Нажмите кнопку сравнения для анализа различий между периодами"
+                    />
+                  )}
+                </Box>
+              </Fade>
+            )}
+
+
           </Box>
         </Card>
       </Box>
     </Box>
   );
-} 
+}
