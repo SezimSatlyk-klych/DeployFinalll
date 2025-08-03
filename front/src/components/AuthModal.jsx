@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Modal, Fade, Box, Tabs, Tab, TextField, Alert, Button, CircularProgress } from '@mui/material';
 import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 function AuthModal({ open, handleClose, onAuthSuccess }) {
   const [tab, setTab] = useState(0);

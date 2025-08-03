@@ -23,7 +23,7 @@ import ManualCrmPage from './components/ManualCrmPage';
 import DonorProfilePage from './components/DonorProfilePage';
 import MainPage from './components/MainPage';
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 function Landing() {
   return (

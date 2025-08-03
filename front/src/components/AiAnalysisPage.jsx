@@ -10,7 +10,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import RemoveIcon from '@mui/icons-material/Remove';
 
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 const VERSION = Date.now(); // Добавляем версию для принудительного обновления кэша
 
 const endpoints = [
