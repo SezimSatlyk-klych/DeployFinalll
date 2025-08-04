@@ -472,6 +472,9 @@ def apply_filters(
         for row in filtered:
             try:
                 amount = float(row.get("Сумма")) if row.get("Сумма") is not None else None
+                # Проверяем на inf, -inf, NaN
+                if amount is not None and not (amount == amount and -1e308 <= amount <= 1e308):
+                    amount = None
             except Exception:
                 amount = None
             if amount is not None:
@@ -583,7 +586,21 @@ def apply_filters(
                     temp.append(row)
             filtered = temp
 
-    return filtered 
+    # Очищаем числовые значения от inf, -inf, NaN перед возвратом
+    cleaned_filtered = []
+    for row in filtered:
+        cleaned_row = {}
+        for key, value in row.items():
+            if isinstance(value, (int, float)):
+                if value == value and -1e308 <= value <= 1e308:  # Проверяем на inf, -inf, NaN
+                    cleaned_row[key] = value
+                else:
+                    cleaned_row[key] = None
+            else:
+                cleaned_row[key] = value
+        cleaned_filtered.append(cleaned_row)
+
+    return cleaned_filtered 
 
 @router.get("/filter_users_excel_2025", tags=["Excel"])
 def filter_users_excel_2025(
