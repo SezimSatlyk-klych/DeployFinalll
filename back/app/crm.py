@@ -35,7 +35,17 @@ def get_crm(db: Session = Depends(get_db)):
                 pass
         # Добавляем источник
         data['source'] = entry.source if hasattr(entry, 'source') else None
-        result.append(data)
+        # Очищаем числовые значения от inf, -inf, NaN
+        cleaned_data = {}
+        for key, value in data.items():
+            if isinstance(value, (int, float)):
+                if value == value and -1e308 <= value <= 1e308:  # Проверяем на inf, -inf, NaN
+                    cleaned_data[key] = value
+                else:
+                    cleaned_data[key] = None
+            else:
+                cleaned_data[key] = value
+        result.append(cleaned_data)
     return result
 
 @router.get("/crm/filter", tags=["CRM"])
@@ -97,6 +107,9 @@ def filter_crm(
             if data.get(sum_field) is not None:
                 try:
                     amount = float(data[sum_field])
+                    # Проверяем на inf, -inf, NaN
+                    if not (amount == amount and -1e308 <= amount <= 1e308):
+                        amount = None
                     break
                 except Exception:
                     pass
@@ -119,7 +132,17 @@ def filter_crm(
             l_val = (data.get("language") or data.get("язык") or "").strip().lower()
             if l_val not in {lang.strip().lower() for lang in language}:
                 continue
-        result.append(data)
+        # Очищаем числовые значения от inf, -inf, NaN
+        cleaned_data = {}
+        for key, value in data.items():
+            if isinstance(value, (int, float)):
+                if value == value and -1e308 <= value <= 1e308:  # Проверяем на inf, -inf, NaN
+                    cleaned_data[key] = value
+                else:
+                    cleaned_data[key] = None
+            else:
+                cleaned_data[key] = value
+        result.append(cleaned_data)
     # Группировка и фильтрация по типу донатора
     if type:
         accepted = {t.strip().lower() for t in type}
@@ -237,7 +260,10 @@ def donator_profile(key: str = Query(...), db: Session = Depends(get_db)):
         for sum_field in ["Сумма", "Сумма операции", "Кредит", "Дебет"]:
             if d.get(sum_field) is not None:
                 try:
-                    amounts.append(float(d[sum_field]))
+                    amount = float(d[sum_field])
+                    # Проверяем на inf, -inf, NaN
+                    if amount == amount and -1e308 <= amount <= 1e308:
+                        amounts.append(amount)
                     break
                 except Exception:
                     pass
@@ -252,9 +278,23 @@ def donator_profile(key: str = Query(...), db: Session = Depends(get_db)):
         "first_donation": min(dates) if dates else None,
         "last_donation": max(dates) if dates else None
     }
+    # Очищаем числовые значения в donations от inf, -inf, NaN
+    cleaned_donations = []
+    for d in donations:
+        cleaned_donation = {}
+        for key, value in d.items():
+            if isinstance(value, (int, float)):
+                if value == value and -1e308 <= value <= 1e308:  # Проверяем на inf, -inf, NaN
+                    cleaned_donation[key] = value
+                else:
+                    cleaned_donation[key] = None
+            else:
+                cleaned_donation[key] = value
+        cleaned_donations.append(cleaned_donation)
+    
     return {
         "donator_info": donator_info,
-        "donations": donations,
+        "donations": cleaned_donations,
         "stats": stats
     }
 
