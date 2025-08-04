@@ -235,7 +235,7 @@ function UploadExcelForm() {
       const formData = new FormData();
       files.forEach((file) => formData.append('files', file));
       formData.append('source', source.trim());
-      const res = await fetch(`${API_BASE}/api/upload_excel`, {
+      const res = await fetch(`${API_BASE}/upload_excel`, {
         method: 'POST',
         body: formData,
       });
@@ -265,7 +265,7 @@ function UploadExcelForm() {
     setFilesLoading(true);
     try {
       // Получаем список файлов CRM
-      const crmResponse = await fetch(`${API_BASE}/api/list_uploaded_sources`);
+      const crmResponse = await fetch(`${API_BASE}/list_uploaded_sources`);
       if (crmResponse.ok) {
         const crmData = await crmResponse.json();
         setCrmFiles(crmData);
@@ -286,13 +286,13 @@ function UploadExcelForm() {
     try {
       let response;
       if (type === 'crm') {
-        response = await fetch(`${API_BASE}/api/delete_by_source`, {
+        response = await fetch(`${API_BASE}/delete_by_source`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ filename: file.filename })
         });
       } else {
-        response = await fetch(`${API_BASE}/api/delete_by_istochnik`, {
+        response = await fetch(`${API_BASE}/delete_by_istochnik`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ filename: file.filename })
@@ -317,11 +317,11 @@ function UploadExcelForm() {
     try {
       let response;
       if (type === 'crm') {
-        response = await fetch(`${API_BASE}/api/reset_all_crm`, {
+        response = await fetch(`${API_BASE}/reset_all_crm`, {
           method: 'POST'
         });
       } else {
-        response = await fetch(`${API_BASE}/api/reset_all_excel_2025`, {
+        response = await fetch(`${API_BASE}/reset_all_excel_2025`, {
           method: 'POST'
         });
       }

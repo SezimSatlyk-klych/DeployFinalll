@@ -85,7 +85,7 @@ function DonorProfilePage({ donorKey, onBack }) {
     setLoading(true);
     setError('');
     const trimmedKey = cleanName(donorKey || '');
-    fetch(`${API_BASE}/api/crm/donator_profile?key=${encodeURIComponent(trimmedKey)}`)
+    fetch(`${API_BASE}/crm/donator_profile?key=${encodeURIComponent(trimmedKey)}`)
       .then(res => {
         if (!res.ok) throw new Error('Ошибка загрузки профиля');
         return res.json();

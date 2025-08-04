@@ -206,7 +206,7 @@ function CrmTable2025({ onProfile }) {
       const query = params.length ? `?${params.join('&')}` : '';
       const API_BASE = import.meta.env.VITE_API_BASE_URL;
       const token = sessionStorage.getItem('token') || localStorage.getItem('token') || '';
-      const res = await fetch(`${API_BASE}/api/export_users_excel_2025${query}`, {
+      const res = await fetch(`${API_BASE}/export_users_excel_2025${query}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       if (!res.ok) throw new Error('Ошибка экспорта файла');
@@ -251,7 +251,7 @@ function CrmTable2025({ onProfile }) {
       const updates = { ...editData };
       delete updates.id;
       const API_BASE = import.meta.env.VITE_API_BASE_URL;
-      const res = await fetch(`${API_BASE}/api/update_user_excel_2025`, {
+      const res = await fetch(`${API_BASE}/update_user_excel_2025`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: editRow.id, updates }),
@@ -376,7 +376,7 @@ function CrmTable2025({ onProfile }) {
     if (filters.source) params.push(`source=${encodeURIComponent(filters.source)}`);
     const query = params.length ? `?${params.join('&')}` : '';
     const API_BASE = import.meta.env.VITE_API_BASE_URL;
-    fetch(`${API_BASE}/api/filter_users_excel_2025${query}`)
+    fetch(`${API_BASE}/filter_users_excel_2025${query}`)
       .then(res => {
         if (!res.ok) {
           if (res.status === 404) {

@@ -44,7 +44,7 @@ function ManualCrmPage({ onSuccess, onCancel }) {
       if (toSend.length === 0) throw new Error('Заполните хотя бы одну строку');
       const API_BASE = import.meta.env.VITE_API_BASE_URL;
       for (const row of toSend) {
-        const res = await fetch(`${API_BASE}/api/manual_crm_entry`, {
+        const res = await fetch(`${API_BASE}/manual_crm_entry`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data: row, source: row["источник"] || 'manual' }), // теперь источник берется из строки

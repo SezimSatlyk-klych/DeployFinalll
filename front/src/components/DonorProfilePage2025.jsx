@@ -25,7 +25,7 @@ function DonorProfilePage2025({ searchKey, by, onBack }) {
   useEffect(() => {
     setLoading(true);
     setError('');
-    fetch(`${API_BASE}/api/user_analytics_excel_2025?key=${encodeURIComponent(searchKey)}&by=${encodeURIComponent(by)}`)
+    fetch(`${API_BASE}/user_analytics_excel_2025?key=${encodeURIComponent(searchKey)}&by=${encodeURIComponent(by)}`)
       .then(res => {
         if (!res.ok) throw new Error('Ошибка загрузки профиля');
         return res.json();

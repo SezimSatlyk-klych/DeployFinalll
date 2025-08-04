@@ -236,7 +236,7 @@ function UploadExcelForm2025() {
       const formData = new FormData();
       files.forEach((file) => formData.append('files', file));
       formData.append('sources', source.trim());
-      const res = await fetch(`${API_BASE}/api/upload_excel_2025`, {
+      const res = await fetch(`${API_BASE}/upload_excel_2025`, {
         method: 'POST',
         body: formData,
       });
@@ -266,14 +266,14 @@ function UploadExcelForm2025() {
     setFilesLoading(true);
     try {
       // Получаем список файлов CRM
-      const crmResponse = await fetch(`${API_BASE}/api/list_uploaded_sources`);
+      const crmResponse = await fetch(`${API_BASE}/list_uploaded_sources`);
       if (crmResponse.ok) {
         const crmData = await crmResponse.json();
         setCrmFiles(crmData);
       }
 
       // Получаем список файлов CRM 2025
-      const excelResponse = await fetch(`${API_BASE}/api/list_uploaded_istochniks`);
+      const excelResponse = await fetch(`${API_BASE}/list_uploaded_istochniks`);
       if (excelResponse.ok) {
         const excelData = await excelResponse.json();
         setExcel2025Files(excelData);
@@ -294,13 +294,13 @@ function UploadExcelForm2025() {
     try {
       let response;
       if (type === 'crm') {
-        response = await fetch(`${API_BASE}/api/delete_by_source`, {
+        response = await fetch(`${API_BASE}/delete_by_source`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ filename: file.filename })
         });
       } else {
-        response = await fetch(`${API_BASE}/api/delete_by_istochnik`, {
+        response = await fetch(`${API_BASE}/delete_by_istochnik`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ filename: file.filename })
@@ -325,9 +325,9 @@ function UploadExcelForm2025() {
     try {
       let response;
       if (type === 'crm') {
-        response = await fetch(`${API_BASE}/api/reset_all_crm`, { method: 'POST' });
+        response = await fetch(`${API_BASE}/reset_all_crm`, { method: 'POST' });
       } else {
-        response = await fetch(`${API_BASE}/api/reset_all_excel_2025`, { method: 'POST' });
+        response = await fetch(`${API_BASE}/reset_all_excel_2025`, { method: 'POST' });
       }
 
       if (response.ok) {

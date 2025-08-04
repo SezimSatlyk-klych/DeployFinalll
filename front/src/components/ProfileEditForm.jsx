@@ -26,7 +26,7 @@ export default function ProfileEditForm() {
   const fetchProfile = async () => {
     try {
       const token = sessionStorage.getItem('token') || localStorage.getItem('token') || '';
-      const res = await axios.get(`${API_BASE}/api/me/profile`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
+      const res = await axios.get(`${API_BASE}/me/profile`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
       setForm(f => ({ ...f, ...res.data }));
     } catch (err) {
       console.error('Ошибка получения профиля');
@@ -54,7 +54,7 @@ export default function ProfileEditForm() {
         if (k === 'file' && v) formData.append('file', v);
         else if (k !== 'file') formData.append(k, v);
       });
-      await axios.post(`${API_BASE}/api/me/profile`, formData, {
+      await axios.post(`${API_BASE}/me/profile`, formData, {
         headers: { 'Authorization': (sessionStorage.getItem('token') || localStorage.getItem('token')) ? `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` : undefined }
       });
       setSuccess('Профиль успешно обновлён!');

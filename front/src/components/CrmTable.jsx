@@ -145,7 +145,7 @@ function CrmTable({ refresh, onProfile }) {
       if (filters.by) params.push(`by=${encodeURIComponent(filters.by)}`);
       const query = params.length ? `?${params.join('&')}` : '';
       const API_BASE = import.meta.env.VITE_API_BASE_URL;
-      const url = `${API_BASE}/api/crm/export_excel${query}`;
+      const url = `${API_BASE}/crm/export_excel${query}`;
       const token = sessionStorage.getItem('token') || localStorage.getItem('token') || '';
       const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       if (!res.ok) throw new Error('Ошибка экспорта файла');
@@ -203,7 +203,7 @@ function CrmTable({ refresh, onProfile }) {
     if (filters.by) params.push(`by=${encodeURIComponent(filters.by)}`);
     const query = params.length ? `?${params.join('&')}` : '';
     const API_BASE = import.meta.env.VITE_API_BASE_URL;
-    fetch(`${API_BASE}/api/crm/filter${query}`)
+    fetch(`${API_BASE}/crm/filter${query}`)
       .then(res => {
         if (!res.ok) throw new Error('Ошибка загрузки данных CRM');
         return res.json();

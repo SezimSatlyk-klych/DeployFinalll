@@ -55,7 +55,7 @@ function ManualCrmPage2025({ onSuccess, onCancel }) {
       if (toSend.length === 0) throw new Error('Заполните хотя бы одну строку');
       const API_BASE = import.meta.env.VITE_API_BASE_URL;
       for (const row of toSend) {
-        const res = await fetch(`${API_BASE}/api/add_user_excel_2025`, {
+        const res = await fetch(`${API_BASE}/add_user_excel_2025`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(row),

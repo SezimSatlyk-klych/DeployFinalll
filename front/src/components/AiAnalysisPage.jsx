@@ -16,7 +16,7 @@ const VERSION = Date.now(); // Добавляем версию для прину
 const endpoints = [
   {
     label: 'Анализировать CRM 2018-2024',
-    endpoint: `${API_URL}/api/ai/analyze_crm_only`,
+    endpoint: `${API_URL}/ai/analyze_crm_only`,
     icon: <AnalyticsIcon sx={{ mr: 1 }} />,
     key: 'crm',
     color: '#2196F3',
@@ -24,7 +24,7 @@ const endpoints = [
   },
   {
     label: 'Анализировать CRM 2025',
-    endpoint: `${API_URL}/api/ai/analyze_excel_2025_only`,
+    endpoint: `${API_URL}/ai/analyze_excel_2025_only`,
     icon: <BarChartIcon sx={{ mr: 1 }} />,
     key: 'excel2025',
     color: '#FF6B6B',
@@ -32,7 +32,7 @@ const endpoints = [
   },
   {
     label: 'Сравнить периоды',
-    endpoint: `${API_URL}/api/ai/compare_periods`,
+    endpoint: `${API_URL}/ai/compare_periods`,
     icon: <AssessmentIcon sx={{ mr: 1 }} />,
     key: 'comparison',
     color: '#9C27B0',
